@@ -1,19 +1,25 @@
 import json
+import pprint
 
 import urllib3
 
 http = urllib3.PoolManager()
+pp = pprint.PrettyPrinter(indent=1)
 
 BASE_URL = 'http://localhost:3000'
 
 
 class GiteaUser:
+    """Класс GiteaUser"""
+
     def __init__(self, username: str, password: str, token: str = None):
         self.username = username
         self.password = password
         self.token = token
 
     def get_headers(self):
+        """Генерируем хедары на основе наличия токена"""
+
         if self.token:
             headers = {
                 'Authorization': f'token {self.token}'
@@ -24,6 +30,8 @@ class GiteaUser:
         return headers
 
     def create_token(self):
+        """Создаём токен"""
+
         data = {
             'name': self.username,
         }
@@ -41,6 +49,7 @@ class GiteaUser:
         print(f'Token {self.token}')
 
     def get_repositories(self):
+        """Получаем список репозиторий"""
 
         headers = self.get_headers()
 
@@ -51,11 +60,22 @@ class GiteaUser:
 
         r_data = json.loads(r.data.decode('utf-8'))
 
-        print(r_data)
+        pp.pprint(r_data)
 
-    def create_repository(self, name: str = 'test_repo'):
+    def create_repository(self, name: str = 'test_repo',
+                          description: str = 'Test Repository'):
+        """Создаём новый репозиторий"""
+
         data = {
-            'name': name,
+            "auto_init": True,
+            "default_branch": "main",
+            "description": description,
+            "gitignores": "Python",
+            "license": "MIT",
+            "name": name,
+            "private": False,
+            "template": True,
+            "trust_model": "default"
         }
 
         headers = self.get_headers()
@@ -63,11 +83,11 @@ class GiteaUser:
         url = f'{BASE_URL}/api/v1/user/repos'
         r = http.request('POST', url, fields=data, headers=headers)
 
-        assert r.status == 200
+        assert r.status == 201
 
         r_data = json.loads(r.data.decode('utf-8'))
 
-        print(r_data)
+        pp.pprint(r_data)
 
 
 def create_user():
@@ -87,3 +107,4 @@ if __name__ == '__main__':
     user = GiteaUser('test', 'test12',
                      '9b329b9aaf76f6a469618a8a5ce9e3a577a33c0e')
     user.get_repositories()
+    user.create_repository('asdfasdf')
