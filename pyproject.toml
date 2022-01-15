@@ -8,9 +8,9 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pytest = "^6.2.5"
-urllib3 = "^1.26.8"
-pydantic = "^1.9.0"
+pytest = "^6.2"
+urllib3 = "^1.26"
+pytest-docker-compose = "^3.2.1"
 
 [tool.poetry.dev-dependencies]
 
@@ -20,7 +20,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 minversion = "6.2"
-addopts = "-ra -q"
+addopts = "--docker-compose=docker/docker-compose.yml"
 testpaths = [
     "tests",
 ]

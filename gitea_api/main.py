@@ -1,14 +1,15 @@
 import json
 
 import urllib3
+from urllib3.util.retry import Retry
 
 http = urllib3.PoolManager()
 
-BASE_URL = 'http://localhost:3000'
-
 
 class GiteaAPI:
-    """Класс GiteaUser"""
+    """Класс GiteaAPI"""
+
+    BASE_URL = 'http://localhost:3000'
 
     def __init__(
             self, username: str, email: str, password: str, token: str = None):
@@ -17,31 +18,20 @@ class GiteaAPI:
         self.password = password
         self.token = token
 
-    @staticmethod
-    def health_check():
-        r = http.request('GET', BASE_URL)
-        assert r.status == 200
-        return r.status
+    def health_check(self):
+        """Проверка состояния API"""
 
-    @staticmethod
-    def create_user(username: str, email: str, password: str):
-        r = http.request('GET', BASE_URL)
-        assert r.status == 201
+        retry = Retry(total=5,
+                      backoff_factor=0.2)
+        http_retry = urllib3.PoolManager(retries=retry)
+        r = http_retry.request('GET', self.BASE_URL)
+        return r
 
-    def _get_headers(self):
-        """Генерируем хедары на основе наличия токена"""
+    def set_base_url(self, host: str, port: str, protocol: str = 'http'):
+        """Измениям base_url API"""
 
-        if self.token:
-            print('GOT TOKEN')
-            headers = {
-                'Authorization': f'token {self.token}',
-                'Content-Type': 'application/json'
-            }
-            return headers
-
-        headers = urllib3.make_headers(
-            basic_auth=f'{self.username}:{self.password}')
-        return headers
+        self.BASE_URL = f'{protocol}://{host}:{port}'
+        return self.BASE_URL
 
     def create_user(self, username: str, email: str, password: str):
         """Создаём пользователя"""
@@ -56,7 +46,7 @@ class GiteaAPI:
 
         headers = self._get_headers()
 
-        url = f'{BASE_URL}/api/v1/admin/users'
+        url = f'{self.BASE_URL}/api/v1/admin/users'
 
         r = http.request('POST', url, body=data, headers=headers)
 
@@ -70,7 +60,7 @@ class GiteaAPI:
 
         headers = self._get_headers()
 
-        url = f'{BASE_URL}/api/v1/admin/users'
+        url = f'{self.BASE_URL}/api/v1/admin/users'
         r = http.request('GET', url, headers=headers)
 
         r_data = json.loads(r.data.decode('utf-8'))
@@ -87,7 +77,7 @@ class GiteaAPI:
 
         headers = self._get_headers()
 
-        url = f'{BASE_URL}/api/v1/users/{self.username}/tokens'
+        url = f'{self.BASE_URL}/api/v1/users/{self.username}/tokens'
 
         r = http.request('POST', url, fields=data, headers=headers)
 
@@ -103,7 +93,7 @@ class GiteaAPI:
 
         headers = self._get_headers()
 
-        url = f'{BASE_URL}/api/v1/user/repos'
+        url = f'{self.BASE_URL}/api/v1/user/repos'
         r = http.request('GET', url, headers=headers)
 
         r_data = json.loads(r.data.decode('utf-8'))
@@ -129,7 +119,7 @@ class GiteaAPI:
 
         headers = self._get_headers()
 
-        url = f'{BASE_URL}/api/v1/user/repos'
+        url = f'{self.BASE_URL}/api/v1/user/repos'
         r = http.request('POST', url, body=data, headers=headers)
 
         r_data = json.loads(r.data.decode('utf-8'))
@@ -157,7 +147,7 @@ class GiteaAPI:
 
         headers = self._get_headers()
 
-        url = f'{BASE_URL}/api/v1/repos/{self.username}/{repo}/contents/{filepath}'
+        url = f'{self.BASE_URL}/api/v1/repos/{self.username}/{repo}/contents/{filepath}'
         r = http.request('POST', url, body=data, headers=headers)
 
         r_data = json.loads(r.data.decode('utf-8'))
@@ -172,7 +162,7 @@ class GiteaAPI:
 
         headers = self._get_headers()
 
-        url = f'{BASE_URL}/api/v1/repos/{self.username}/{repo}/contents/{filepath}'
+        url = f'{self.BASE_URL}/api/v1/repos/{self.username}/{repo}/contents/{filepath}'
         r = http.request('GET', url, headers=headers)
 
         r_data = json.loads(r.data.decode('utf-8'))
@@ -180,15 +170,28 @@ class GiteaAPI:
         assert r.status == 200
         return r.status, r_data
 
+    def _get_headers(self):
+        """Генерируем хедары на основе наличия токена"""
+
+        if self.token:
+            headers = {
+                'Authorization': f'token {self.token}',
+                'Content-Type': 'application/json'
+            }
+            return headers
+
+        headers = urllib3.make_headers(
+            basic_auth=f'{self.username}:{self.password}')
+        return headers
+
 
 if __name__ == '__main__':
-    GiteaAPI.health_check()
 
     admin_login = {
         'username': 'gitadmin',
         'email': 'admin@example.com',
         'password': 'password',
-        'token': '070008382fdf2f57ab694b031eea9e61e13f8b30',
+        # 'token': '070008382fdf2f57ab694b031eea9e61e13f8b30',
     }
 
     user_login = {
@@ -199,13 +202,14 @@ if __name__ == '__main__':
     }
 
     admin = GiteaAPI(**admin_login)
+    admin.health_check()
     # admin.create_token()
-    print(admin.create_user(**user_login))
-    print(admin.get_users())
+    # print(admin.create_user(**user_login))
+    # print(admin.get_users())
 
-    user = GiteaAPI(**user_login)
-    user.create_token()
-    user.get_repositories()
-    user.create_repository(name='test_repo')
-    user.add_file_to_repository(repo='test_repo', filepath='main.py')
-    user.get_file_from_repository(repo='test_repo', filepath='main.py')
+    # user = GiteaAPI(**user_login)
+    # user.create_token()
+    # user.get_repositories()
+    # user.create_repository(name='test_repo')
+    # user.add_file_to_repository(repo='test_repo', filepath='main.py')
+    # user.get_file_from_repository(repo='test_repo', filepath='main.py')
