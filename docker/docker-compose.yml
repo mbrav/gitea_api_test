@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 
 networks:
     gitea:
@@ -8,6 +8,15 @@ services:
     server:
         image: gitea/gitea:1
         container_name: gitea
+        # build:
+        #     context: .
+        #     dockerfile: ./docker/Dockerfile
+        #     args:
+        #         - ADMIN_USER=${ADMIN_USER}
+        #         - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+        #         - ADMIN_EMAIL=${ADMIN_EMAIL}
+        env_file:
+            - .env
         environment:
             - USER=git
             - USER_UID=1000
